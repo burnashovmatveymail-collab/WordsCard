@@ -1,1 +1,97 @@
-<!DOCTYPE html> <html lang="ru"> <head> <meta charset="UTF-8"> <meta name="viewport" content="width=device-width, initial-scale=1"> <title>FateFront</title> <style> html, body { margin: 0; height: 100%; background: #0e0f12; font-family: system-ui; overflow: hidden; } #hud { position: fixed; left: 12px; top: 10px; font-size: 12px; opacity: 0.75; background: rgba(0,0,0,0.25); padding: 6px 8px; border-radius: 8px; } canvas { display: block; width: 100vw; height: 100vh; } </style> </head> <body> <div id="hud">pos: 0,0</div> <canvas id="game"></canvas> <script> const canvas = document.getElementById('game'); const ctx = canvas.getContext('2d'); const hud = document.getElementById('hud'); function resize() { canvas.width = innerWidth; canvas.height = innerHeight; } addEventListener('resize', resize); resize(); const state = { pos: { x: 100, y: 100 }, mapAngle: 0, speed: 200, keys: { w:false, a:false, s:false, d:false, left:false, right:false }, jump: { active: false, startTime: 0, cooldown: 3000, lastJump: -9999, duration: 900 } }; const walls = [ {x:50,y:50,w:800,h:20, type:'solid'}, {x:50,y:50,w:20,h:600, type:'solid'}, {x:830,y:50,w:20,h:600, type:'solid'}, {x:50,y:630,w:800,h:20, type:'solid'}, {x:150,y:150,w:200,h:20, type:'jumpable'}, {x:400,y:150,w:20,h:150, type:'jumpable'}, {x:200,y:300,w:300,h:20, type:'jumpable'}, {x:600,y:100,w:20,h:200, type:'jumpable'}, {x:100,y:450,w:150,h:20, type:'solid'}, {x:300,y:500,w:20,h:100, type:'solid'}, {x:500,y:400,w:150,h:20, type:'solid'}, {x:700,y:500,w:20,h:100, type:'solid'}, {x:600,y:550,w:100,h:20, type:'jumpable'}, {x:650,y:350,w:20,h:100, type:'jumpable'}, {x:400,y:600,w:200,h:20, type:'jumpable'} ]; const doors = [ {x:230,y:50,w:40,h:20,open:false}, {x:700,y:50,w:40,h:20,open:false}, ]; const npc = { x: 500, y: 200, angle: 0 }; const npcViewDistance = 100; const npcViewAngle = Math.PI / 3; // 60° в каждую сторону const npcTurnSpeed = 2.5 * Math.PI / 180; // максимальный поворот за кадр addEventListener('keydown', e => { const k = e.key.toLowerCase(); if(k==='w') state.keys.w=true; if(k==='a') state.keys.a=true; if(k==='s') state.keys.s=true; if(k==='d') state.keys.d=true; if(k==='arrowleft') state.keys.left=true; if(k==='arrowright') state.keys.right=true; if(k==='arrowup') { const now = performance.now(); if(now - state.jump.lastJump > state.jump.cooldown) { state.jump.active = true; state.jump.startTime = now; state.jump.lastJump = now; } } if(k==='f') { doors.forEach(door => { const dx = state.pos.x - (door.x + door.w/2); const dy = state.pos.y - (door.y + door.h/2); const dist = Math.hypot(dx,dy); if(dist<50) door.open = !door.open; }); } }); addEventListener('keyup', e => { const k = e.key.toLowerCase(); if(k==='w') state.keys.w=false; if(k==='a') state.keys.a=false; if(k==='s') state.keys.s=false; if(k==='d') state.keys.d=false; if(k==='arrowleft') state.keys.left=false; if(k==='arrowright') state.keys.right=false; }); function lineIntersectsRect(x1, y1, x2, y2, rect) { const left = rect.x, right = rect.x + rect.w; const top = rect.y, bottom = rect.y + rect.h; function ccw(Ax,Ay,Bx,By,Cx,Cy){ return (Cy-Ay)*(Bx-Ax) > (By-Ay)*(Cx-Ax); } function intersect(Ax,Ay,Bx,By,Cx,Cy,Dx,Dy){ return ccw(Ax,Ay,Cx,Cy,Dx,Dy) !== ccw(Bx,By,Cx,Cy,Dx,Dy) && ccw(Ax,Ay,Bx,By,Cx,Cy) !== ccw(Ax,Ay,Bx,By,Dx,Dy); } if(intersect(x1,y1,x2,y2,left,top,right,top)) return true; if(intersect(x1,y1,x2,y2,right,top,right,bottom)) return true; if(intersect(x1,y1,x2,y2,right,bottom,left,bottom)) return true; if(intersect(x1,y1,x2,y2,left,bottom,left,top)) return true; return false; } function canSeePlayer() { const dx = state.pos.x - npc.x; const dy = state.pos.y - npc.y; const dist = Math.hypot(dx, dy); if(dist > npcViewDistance) return false; const angleToPlayer = Math.atan2(dy, dx); let deltaAngle = angleToPlayer - npc.angle; deltaAngle = Math.atan2(Math.sin(deltaAngle), Math.cos(deltaAngle)); if(Math.abs(deltaAngle) > npcViewAngle) return false; for(const wall of walls){ if(lineIntersectsRect(npc.x,npc.y,state.pos.x,state.pos.y,wall)) return false; } for(const door of doors){ if(!door.open && lineIntersectsRect(npc.x,npc.y,state.pos.x,state.pos.y,door)) return false; } return true; } function update(dt){ const turnSpeed = 2.5 * Math.PI / 180; if(state.keys.left) state.mapAngle -= turnSpeed; if(state.keys.right) state.mapAngle += turnSpeed; const forward = { x: Math.sin(state.mapAngle), y: -Math.cos(state.mapAngle) }; const right = { x: Math.cos(state.mapAngle), y: Math.sin(state.mapAngle) }; let dx=0, dy=0; if(state.keys.w){ dx+=forward.x*state.speed*dt; dy+=forward.y*state.speed*dt; } if(state.keys.s){ dx-=forward.x*state.speed*dt; dy-=forward.y*state.speed*dt; } if(state.keys.a){ dx-=right.x*state.speed*dt; dy-=right.y*state.speed*dt; } if(state.keys.d){ dx+=right.x*state.speed*dt; dy+=right.y*state.speed*dt; } const newX = state.pos.x + dx; const newY = state.pos.y + dy; const playerSize = 16; let collision=false; [...walls,...doors.filter(d=>!d.open)].forEach(rect=>{ if(newX+playerSize>rect.x && newX-playerSize<rect.x+rect.w && newY+playerSize>rect.y && newY-playerSize<rect.y+rect.h) { if(rect.type==='jumpable' && state.jump.active) { } else collision=true; } }); if(!collision){ state.pos.x=newX; state.pos.y=newY; } if(canSeePlayer()) { const targetAngle = Math.atan2(state.pos.y - npc.y, state.pos.x - npc.x); let delta = targetAngle - npc.angle; delta = Math.atan2(Math.sin(delta), Math.cos(delta)); if(Math.abs(delta) > npcTurnSpeed){ npc.angle += Math.sign(delta) * npcTurnSpeed; } else { npc.angle = targetAngle; } } hud.innerHTML=pos: ${(state.pos.x/10).toFixed(1)}m, ${(state.pos.y/10).toFixed(1)}m; } function getJumpScale() { if(!state.jump.active) return 1; const t = performance.now() - state.jump.startTime; const p = t / state.jump.duration; if(p >= 1) { state.jump.active = false; return 1; } if(p < 0.3) return 1 + 0.2*(p/0.3); if(p < 0.4) return 1.2; return 1.2 - 0.2*((p-0.4)/0.6); } function draw(){ ctx.clearRect(0,0,canvas.width,canvas.height); const cx = canvas.width/2; const cy = canvas.height/2; const scale = getJumpScale(); ctx.save(); ctx.translate(cx, cy); ctx.scale(1/scale, 1/scale); ctx.rotate(-state.mapAngle); ctx.translate(-state.pos.x, -state.pos.y); ctx.fillStyle='#7c7f85'; walls.forEach(w=>ctx.fillRect(w.x,w.y,w.w,w.h)); ctx.fillStyle='#f59e0b'; doors.forEach(d=>{ if(!d.open) ctx.fillRect(d.x,d.y,d.w,d.h); }); ctx.save(); ctx.translate(npc.x, npc.y); ctx.rotate(npc.angle); ctx.fillStyle='#f87171'; ctx.beginPath(); ctx.moveTo(0, -16); ctx.lineTo(12, 16); ctx.lineTo(-12, 16); ctx.closePath(); ctx.fill(); ctx.restore(); ctx.restore(); ctx.save(); ctx.translate(cx, cy); ctx.scale(scale, scale); ctx.fillStyle='#4ade80'; ctx.beginPath(); ctx.moveTo(0, -16); ctx.lineTo(12, 16); ctx.lineTo(-12, 16); ctx.closePath(); ctx.fill(); ctx.restore(); } function loop(){ requestAnimationFrame(loop); const dt=1/60; update(dt); draw(); } requestAnimationFrame(loop); </script> </body> </html>
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WordsCard — Коллекционная карточная игра</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Подключаем Firebase SDK -->
+    <script type="module" src="app.js"></script>
+</head>
+<body>
+    <div id="app">
+        <!-- Экран авторизации (показывается, если не вошел) -->
+        <section id="auth-screen" class="screen active">
+            <div class="auth-card">
+                <h1>WordsCard</h1>
+                <p>Коллекционируй слова, открывай паки, торгуй на аукционе!</p>
+                <button id="google-login-btn" class="btn primary">Войти через Google</button>
+            </div>
+        </section>
+
+        <!-- Главный игровой экран (показывается после входа) -->
+        <section id="game-screen" class="screen">
+            <header class="game-header">
+                <div class="user-info">
+                    <span id="user-name">Игрок</span>
+                    <span class="balance">💰 <span id="user-balance">0</span> $</span>
+                </div>
+                <button id="logout-btn" class="btn secondary">Выйти</button>
+            </header>
+
+            <nav class="game-nav">
+                <button class="nav-btn active" data-tab="market">Магазин паков</button>
+                <button class="nav-btn" data-tab="inventory">Инвентарь</button>
+                <button class="nav-btn" data-tab="words">Ввод слов ($)</button>
+                <button class="nav-btn" data-tab="auction">Аукцион</button>
+            </nav>
+
+            <main class="game-content">
+                <!-- Вкладка: Магазин -->
+                <div id="market-tab" class="tab-content active">
+                    <h2>Магазин паков</h2>
+                    <div class="packs-grid">
+                        <div class="pack-card" data-price="200">
+                            <h3>Стартовый пак</h3>
+                            <p>2 случайные карты</p>
+                            <span class="price">200 $</span>
+                            <button class="buy-pack-btn">Купить пак</button>
+                        </div>
+                        <div class="pack-card" data-price="500">
+                            <h3>Стандартный пак</h3>
+                            <p>5 случайных карт</p>
+                            <span class="price">500 $</span>
+                            <button class="buy-pack-btn">Купить пак</button>
+                        </div>
+                        <div class="pack-card" data-price="1000">
+                            <h3>Элитный пак</h3>
+                            <p>10 случайных карт</p>
+                            <span class="price">1000 $</span>
+                            <button class="buy-pack-btn">Купить пак</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Вкладка: Инвентарь -->
+                <div id="inventory-tab" class="tab-content">
+                    <h2>Ваш инвентарь</h2>
+                    <div id="cards-container" class="cards-grid">
+                        <!-- Здесь будут карточки пользователя -->
+                        <p class="empty-text">У вас пока нет карт. Купите пак или введите слово!</p>
+                    </div>
+                </div>
+
+                <!-- Вкладка: Ввод слов -->
+                <div id="words-tab" class="tab-content">
+                    <h2>Заработок на словах</h2>
+                    <p>Введите редкое слово, чтобы получить за него деньги и карту (1 раз на аккаунт).</p>
+                    <div class="word-input-box">
+                        <input type="text" id="word-input" placeholder="Введите уникальное слово...">
+                        <button id="submit-word-btn" class="btn primary">Проверить и получить награду</button>
+                    </div>
+                    <div id="word-result"></div>
+                </div>
+
+                <!-- Вкладка: Аукцион -->
+                <div id="auction-tab" class="tab-content">
+                    <h2>Аукцион игроков</h2>
+                    <p>Здесь можно выставлять карты и старые паки на торги.</p>
+                    <div id="auction-list">
+                        <p class="empty-text">На аукционе пока ничего нет.</p>
+                    </div>
+                </div>
+            </main>
+        </section>
+    </div>
+</body>
+</html>

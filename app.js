@@ -28,94 +28,90 @@ function updateUI() {
     renderInventory();
 }
 
-// --- НАВИГАЦИЯ И ИНИЦИАЛИЗАЦИЯ ---
-document.addEventListener('DOMContentLoaded', () => {
-    loadGame();
+// --- ИНИЦИАЛИЗАЦИЯ СОБЫТИЙ (Без DOMContentLoaded для модулей) ---
+// Кнопка входа
+document.getElementById('google-login-btn').addEventListener('click', () => {
+    document.getElementById('auth-screen').classList.remove('active');
+    document.getElementById('game-screen').classList.add('active');
+});
 
-    // Имитация входа (позже подключим Google Auth)
-    document.getElementById('google-login-btn').addEventListener('click', () => {
-        document.getElementById('auth-screen').classList.remove('active');
-        document.getElementById('game-screen').classList.add('active');
+// Кнопка выхода
+document.getElementById('logout-btn').addEventListener('click', () => {
+    document.getElementById('game-screen').classList.remove('active');
+    document.getElementById('auth-screen').classList.add('active');
+});
+
+// Переключение вкладок меню
+const navButtons = document.querySelectorAll('.nav-btn');
+navButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+        navButtons.forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+
+        btn.classList.add('active');
+        const tabId = btn.getAttribute('data-tab') + '-tab';
+        document.getElementById(tabId).classList.add('active');
     });
+});
 
-    document.getElementById('logout-btn').addEventListener('click', () => {
-        document.getElementById('game-screen').classList.remove('active');
-        document.getElementById('auth-screen').classList.add('active');
-    });
-
-    // Переключение вкладок меню
-    const navButtons = document.querySelectorAll('.nav-btn');
-    navButtons.forEach(btn => {
-        btn.addEventListener('click', () => {
-            navButtons.forEach(b => b.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
-
-            btn.classList.add('active');
-            const tabId = btn.getAttribute('data-tab') + '-tab';
-            document.getElementById(tabId).classList.add('active');
-        });
-    });
-
-    // Покупка паков
-    document.querySelectorAll('.buy-pack-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            const packCard = e.target.closest('.pack-card');
-            const price = parseInt(packCard.getAttribute('data-price'));
-            
-            if (gameData.balance < price) {
-                alert('Недостаточно средств!');
-                return;
-            }
-
-            gameData.balance -= price;
-            openPack(packCard.querySelector('h3').textContent);
-            saveGame();
-        });
-    });
-
-    // Ввод слов (промо-механика)
-    document.getElementById('submit-word-btn').addEventListener('click', () => {
-        const input = document.getElementById('word-input');
-        const word = input.value.trim().toLowerCase();
-        const resultBox = document.getElementById('word-result');
-
-        if (!word) {
-            resultBox.innerHTML = '<p style="color: #ef4444;">Введите слово!</p>';
+// Покупка паков
+document.querySelectorAll('.buy-pack-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+        const packCard = e.target.closest('.pack-card');
+        const price = parseInt(packCard.getAttribute('data-price'));
+        
+        if (gameData.balance < price) {
+            alert('Недостаточно средств!');
             return;
         }
 
-        if (gameData.usedWords.includes(word)) {
-            resultBox.innerHTML = '<p style="color: #ef4444;">Вы уже вводили это слово! Одно слово на аккаунт.</p>';
-            return;
-        }
-
-        // Оценка редкости по длине слова
-        let rarity = 'Обычная';
-        let reward = 50;
-        
-        if (word.length > 10) {
-            rarity = 'Эпическая';
-            reward = 1000;
-        } else if (word.length > 6) {
-            rarity = 'Редкая';
-            reward = 150;
-        }
-
-        gameData.usedWords.push(word);
-        gameData.balance += reward;
-        
-        gameData.inventory.push({
-            id: Date.now() + Math.random().toString(36).substr(2, 9),
-            word: word,
-            rarity: rarity,
-            price: reward,
-            date: new Date().toLocaleDateString()
-        });
-
+        gameData.balance -= price;
+        openPack(packCard.querySelector('h3').textContent);
         saveGame();
-        input.value = '';
-        resultBox.innerHTML = `<p style="color: #4ade80;">Успех! Слово "${word}" (${rarity}) добавлено. Награда: ${reward} $</p>`;
     });
+});
+
+// Ввод слов (промо-механика)
+document.getElementById('submit-word-btn').addEventListener('click', () => {
+    const input = document.getElementById('word-input');
+    const word = input.value.trim().toLowerCase();
+    const resultBox = document.getElementById('word-result');
+
+    if (!word) {
+        resultBox.innerHTML = '<p style="color: #ef4444;">Введите слово!</p>';
+        return;
+    }
+
+    if (gameData.usedWords.includes(word)) {
+        resultBox.innerHTML = '<p style="color: #ef4444;">Вы уже вводили это слово! Одно слово на аккаунт.</p>';
+        return;
+    }
+
+    let rarity = 'Обычная';
+    let reward = 50;
+    
+    if (word.length > 10) {
+        rarity = 'Эпическая';
+        reward = 1000;
+    } else if (word.length > 6) {
+        rarity = 'Редкая';
+        reward = 150;
+    }
+
+    gameData.usedWords.push(word);
+    gameData.balance += reward;
+    
+    gameData.inventory.push({
+        id: Date.now() + Math.random().toString(36).substr(2, 9),
+        word: word,
+        rarity: rarity,
+        price: reward,
+        date: new Date().toLocaleDateString()
+    });
+
+    saveGame();
+    input.value = '';
+    resultBox.innerHTML = `<p style="color: #4ade80;">Успех! Слово "${word}" (${rarity}) добавлено. Награда: ${reward} $</p>`;
 });
 
 // --- ПРОЦЕДУРНЫЙ ГЕНЕРАТОР СЛОВ ---
@@ -143,7 +139,7 @@ function generateProceduralWord(rarity) {
     return word;
 }
 
-// --- ЛОГИКА ОТКРЫТИЯ ПАКОВ (Сбалансированные шансы) ---
+// --- ЛОГИКА ОТКРЫТИЯ ПАКОВ ---
 function openPack(packName) {
     let count = 2;
     if (packName.includes('Стандартный')) count = 5;
@@ -158,22 +154,22 @@ function openPack(packName) {
         const roll = Math.random();
 
         if (roll > 0.9999) {
-            rarity = 'Уникальная'; // Шанс 0.01% (1 на 10000)
+            rarity = 'Уникальная';
             price = Math.floor(Math.random() * 30000) + 20000;
         } else if (roll > 0.99) {
-            rarity = 'Легендарная'; // Шанс 0.9%
+            rarity = 'Легендарная';
             price = Math.floor(Math.random() * 18000) + 2000;
         } else if (roll > 0.93) {
-            rarity = 'Эпическая'; // Шанс 6%
+            rarity = 'Эпическая';
             price = Math.floor(Math.random() * 1300) + 700;
         } else if (roll > 0.80) {
-            rarity = 'Плюс-Редкая'; // Шанс 13%
+            rarity: rarity = 'Плюс-Редкая';
             price = Math.floor(Math.random() * 500) + 200;
         } else if (roll > 0.50) {
-            rarity = 'Редкая'; // Шанс 30%
+            rarity = 'Редкая';
             price = Math.floor(Math.random() * 150) + 50;
         } else {
-            rarity = 'Обычная'; // Шанс 50%
+            rarity = 'Обычная';
             price = Math.floor(Math.random() * 40) + 10;
         }
 
@@ -225,3 +221,6 @@ window.sellCard = function(index) {
     saveGame();
     alert(`Вы продали карту "${card.word}" за ${card.price} $!`);
 };
+
+// Первичный запуск загрузки при старте скрипта
+loadGame();

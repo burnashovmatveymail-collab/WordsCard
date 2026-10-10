@@ -1,37 +1,31 @@
-// --- РАСШИРЕННЫЙ СПИСОК СЛОВ И КОРНЕЙ ДЛЯ ГЕНЕРАЦИИ ТЫСЯЧ ВАРИАНТОВ ---
-const wordBank = {
-    common: [
-        "дом", "мир", "книга", "вода", "огонь", "время", "путь", "город", "дверь", "окно",
-        "cat", "dog", "sun", "moon", "tree", "bird", "fish", "book", "hand", "star"
-    ],
-    rare: [
-        "гармония", "горизонт", "феникс", "иллюзия", "невесомость", "лабиринт", "кристалл",
-        "whisper", "horizon", "velocity", "serenity", "galaxy", "quantum", "eclipse", "zenith"
-    ],
-    plusRare: [
-        "созвездие", "перспектива", "меланхолия", "архитектура", "парадокс", "синхронность",
-        "kaleidoscope", "constellation", "tranquility", "labyrinth", "epiphany", "resonance"
-    ],
-    epic: [
-        "квинтэссенция", "метаморфоза", "экзистенциализм", "трансцендентность", "голограмма",
-        "synchronicity", "metamorphosis", "quintessence", "neuroplasticity", "serendipity"
-    ],
-    legendary: [
-        "превысокомногорассмотрительствующий", "водороднокислотный", "антиконституционный",
-        "hippopotomonstrosesquippedaliophobia", "floccinaucinihilipilification", "pneumonoultramicroscopicsilicovolcanoconiosis"
-    ],
-    unique: [
-        "zeitgeist", "petrichor", "sonder", "apricity", "Numinous", "эфир"
-    ]
-};
+// --- ГЕНЕРАТОР СЛОВ (Без статических таблиц) ---
+// Комбинирует слоги для создания бесконечного разнообразия уникальных слов
+function generateProceduralWord(rarity) {
+    const prefixes = ["sub", "trans", "hyper", "meta", "crypto", "neo", "syn", "poly", "tele", "inter", "про", "гипер", "ультра", "анти", "мега"];
+    const roots = ["chron", "graph", "morph", "path", "lum", "flux", "nexus", "Aether", "vortex", "genesis", "пра", "мир", "свет", "тьма", "код", "цель", "дух", "вихрь"];
+    const suffixes = ["ism", "ity", "ium", "esis", "oid", "ion", "ex", "is", "ость", "ение", "ика", "арь", "ент"];
 
-// Функция для получения случайного слова из категории
-function getRandomWordFromBank(category) {
-    const list = wordBank[category];
-    return list[Math.floor(Math.random() * list.length)];
+    let word = "";
+    
+    // Длина и сложность зависит от редкости
+    if (rarity === 'Обычная') {
+        word = roots[Math.floor(Math.random() * roots.length)] + suffixes[Math.floor(Math.random() * suffixes.length)];
+    } else if (rarity === 'Редкая') {
+        word = prefixes[Math.floor(Math.random() * prefixes.length)] + "-" + roots[Math.floor(Math.random() * roots.length)];
+    } else if (rarity === 'Плюс-Редкая') {
+        word = prefixes[Math.floor(Math.random() * prefixes.length)] + roots[Math.floor(Math.random() * roots.length)] + suffixes[Math.floor(Math.random() * suffixes.length)];
+    } else if (rarity === 'Эпическая') {
+        word = "Omni-" + prefixes[Math.floor(Math.random() * prefixes.length)] + roots[Math.floor(Math.random() * roots.length)];
+    } else if (rarity === 'Легендарная') {
+        word = "Absolute_" + prefixes[Math.floor(Math.random() * prefixes.length)] + "_" + roots[Math.floor(Math.random() * roots.length)] + "_" + Math.floor(Math.random() * 9999);
+    } else if (rarity === 'Уникальная') {
+        word = "UNIQUE_1of1_" + Math.random().toString(36).substring(2, 10).toUpperCase();
+    }
+
+    return word;
 }
 
-// Улучшенная логика открытия паков с огромным разнообразием
+// --- СБАЛАНСИРОВАННОЕ ОТКРЫТИЕ ПАКОВ ---
 function openPack(packName) {
     let count = 2;
     if (packName.includes('Стандартный')) count = 5;
@@ -41,40 +35,32 @@ function openPack(packName) {
 
     for (let i = 0; i < count; i++) {
         let rarity = 'Обычная';
-        let price = 15;
-        let category = 'common';
+        let price = 10;
 
+        // Честные и суровые шансы (вероятности от 0 до 1)
         const roll = Math.random();
 
-        if (roll > 0.995) {
-            rarity = 'Уникальная';
+        if (roll > 0.9999) {
+            rarity = 'Уникальная'; // Шанс 0.01% (1 на 10000)
             price = Math.floor(Math.random() * 30000) + 20000;
-            category = 'unique';
-        } else if (roll > 0.97) {
-            rarity = 'Легендарная';
+        } else if (roll > 0.99) {
+            rarity = 'Легендарная'; // Шанс 0.9% (очень редко!)
             price = Math.floor(Math.random() * 18000) + 2000;
-            category = 'legendary';
-        } else if (roll > 0.85) {
-            rarity = 'Эпическая';
+        } else if (roll > 0.93) {
+            rarity = 'Эпическая'; // Шанс 6%
             price = Math.floor(Math.random() * 1300) + 700;
-            category = 'epic';
-        } else if (roll > 0.65) {
-            rarity = 'Плюс-Редкая';
+        } else if (roll > 0.80) {
+            rarity = 'Плюс-Редкая'; // Шанс 13%
             price = Math.floor(Math.random() * 500) + 200;
-            category = 'plusRare';
-        } else if (roll > 0.40) {
-            rarity = 'Редкая';
+        } else if (roll > 0.50) {
+            rarity = 'Редкая'; // Шанс 30%
             price = Math.floor(Math.random() * 150) + 50;
-            category = 'rare';
+        } else {
+            rarity = 'Обычная'; // Шанс 50%
+            price = Math.floor(Math.random() * 40) + 10;
         }
 
-        let word = getRandomWordFromBank(category);
-        
-        // Добавляем небольшой случайный суффикс или вариацию для редких слов, чтобы они не повторялись слишком часто
-        if (category === 'common' || category === 'rare') {
-            // делаем слова уникальными по написанию
-            word = word + (Math.random() > 0.7 ? "" : "");
-        }
+        let word = generateProceduralWord(rarity);
 
         gameData.inventory.push({
             id: Date.now() + Math.random().toString(36).substr(2, 9),
@@ -88,4 +74,5 @@ function openPack(packName) {
     }
 
     alert(openedCardsText);
+    saveGame();
 }
